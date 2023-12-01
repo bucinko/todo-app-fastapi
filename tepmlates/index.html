@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #todos {
+            margin-top: 20px;
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .delete-button {
+            cursor: pointer;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo App</h1>
+    
+    <form id="todoForm">
+        <label for="task">New Task:</label>
+        <input type="text" id="task" required>
+        <button type="submit">Add Todo</button>
+    </form>
+
+    <div id="todos">
+        {% for todo in todos %}
+            <div class="todo-item">
+                <span>{{ todo.task }}</span>
+                <span class="delete-button" onclick="deleteTodo({{ todo.id }})">Delete</span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const todoForm = document.getElementById('todoForm');
+            const taskInput = document.getElementById('task');
+            const todosContainer = document.getElementById('todos');
+
+            // Function to delete a todo
+            async function deleteTodo(todoId) {
+                await fetch(`/todos/${todoId}`, { method: 'DELETE' });
+                fetchTodos();
+            }
+
+            // Function to fetch and display todos
+            async function fetchTodos() {
+                const response = await fetch('/todos/');
+                const todos = await response.json();
+
+                todosContainer.innerHTML = '';
+
+                todos.forEach(todo => {
+                    const todoItem = document.createElement('div');
+                    todoItem.classList.add('todo-item');
+
+                    const todoText = document.createElement('span');
+                    todoText.textContent = todo.task;
+
+                    const deleteButton = document.createElement('span');
+                    deleteButton.classList.add('delete-button');
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.addEventListener('click', () => deleteTodo(todo.id));
+
+                    todoItem.appendChild(todoText);
+                    todoItem.appendChild(deleteButton);
+                    todosContainer.appendChild(todoItem);
+                });
+            }
+
+            // Event listener for form submission
+            todoForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                const task = taskInput.value;
+                if (task.trim() !== '') {
+                    await fetch('/todos/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ task }),
+                    });
+
+                    // Clear input and fetch updated todos
+                    taskInput.value = '';
+                    fetchTodos();
+                }
+            });
+
+            // Initial fetch of todos
+            fetchTodos();
+        });
+    </script>
+</body>
+</html>
