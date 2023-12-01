@@ -1,13 +1,16 @@
-from sqlalchemy import Column
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
 
-from database import Base
 
-class ToDo(Base):
-    __tablename__ = 'todo'
+Base = declarative_base() 
+
+
+class Todo(Base):
+    __tablename__ = 'todos'
     
     id = Column(Integer, primary_key=True, index=True)
-    content = Column(String)
+    task = Column(String(255), nullable=False)
+    completed = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     

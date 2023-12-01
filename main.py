@@ -1,23 +1,21 @@
-import csv
-import uuid
-#from datetime   import timedelta
-from fastapi import FastAPI, HTTPException, Query, Depends, Form, Request, Response
-from fastapi.responses import HTMLResponse, FileResponse
-
-from fastapi.templating import Jinja2Templates
-import sqlalchemy , sqlite3
-from database import SessionLocal, Base, engine
-from models import ToDo
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from database import SessionLocal, engine
+import crud
 
 app = FastAPI()
-conn = sqlite3.connect("todos.db")
-cursor = conn.cursor()
 
 
-Base.metadata.create_all(bind=engine)
+#app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+templates = Jinja2Templates(directory="templates")
+
+
+# Dependency to get the database session
 def get_db_connection():
     db = SessionLocal()
     try:
@@ -25,24 +23,39 @@ def get_db_connection():
     finally:
         db.close()
         
+        
+@app.get("/todos/")
+def read_todos(skip: int = 0, limit: int = 10, db: Session = Depends(get_db_connection)):
+    return crud.get_todos(db=db, skip=skip, limit=limit)
+  
+  
+@app.get("/todo/{id}")
+def get_todo_by_id(id: int, db: Session = Depends(get_db_connection)):
+    return crud.get_todo_by_id(db=db, todo_id=id)
+    if todo_id is None:
+        raise HTTPException(status_code=404, detail="Todo not found")    
+
+
 @app.get("/")
 def home(request: Request, db: Session = Depends(get_db_connection), skip: int = 0, limit: int = 100):
-    todos = db.query(ToDo).offset(skip).limit(limit).all()
-    return todos
-        
-@app.post("/create")
-def add_todo(request: Request, content: str , db: Session = Depends(get_db_connection)):
-    todo = ToDo(content=content)
-    print(todo.content)
-    db.add(todo)
-    db.commit()
-    return todo.content
-    
-@app.delete("/delete/{id}")
-async def delete_todo(id: int, request: Request, db: Session = Depends(get_db_connection)):
-    todo = db.query(ToDo).filter(ToDo.id==id).first()
-    db.delete(todo)
-    db.commit()
-    return {"todo deleted": todo.content}
+    todos = crud.get_todos(db=db)
+    return templates.TemplateResponse("index.html", {"request": request, "todos": todos})
 
+        
+@app.post("/todo")
+def add_todo(task: str, db: Session = Depends(get_db_connection)):
+    return crud.create_todo(db=db, task=task)
+    
+@app.delete("/todo/{id}")
+async def delete_todo(id: int, db: Session = Depends(get_db_connection)):
+    db_todo = crud.get_todo_by_id(db=db, todo_id=id)
+    if db_todo is None:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    db.delete(db_todo)
+    db.commit()
+    return {
+        "message": f"Todo {id} deleted successfully",
+        "todo_content": f"{db_todo.task} "
+            }
+    
 
