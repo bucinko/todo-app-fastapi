@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from database import SessionLocal, engine
 import crud
+import models
 
 app = FastAPI()
 
@@ -42,9 +43,13 @@ def home(request: Request, db: Session = Depends(get_db_connection), skip: int =
     return templates.TemplateResponse("index.html", {"request": request, "todos": todos})
 
         
-@app.post("/todo")
-def add_todo(task: str, db: Session = Depends(get_db_connection)):
-    return crud.create_todo(db=db, task=task)
+@app.post("/create")
+def add_todo(request: Request, task: str = Form(...), db: Session = Depends(get_db_connection)):
+    new_todo = models.Todo(task=task)
+    db.add(new_todo)
+    db.commit()
+    # print(content_type)
+    #return crud.create_todo(db=db, task=task)
     
 @app.delete("/todo/{id}")
 async def delete_todo(id: int, db: Session = Depends(get_db_connection)):

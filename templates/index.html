@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Todo App</title>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const { useState, useEffect } = React;
+
+            const TodoApp = () => {
+                const [todos, setTodos] = useState([]);
+                const [title, setTitle] = useState('');
+
+                useEffect(() => {
+                    fetchTodos();
+                }, []);
+
+                const fetchTodos = async () => {
+                    const response = await fetch('/todos/');
+                    const todos = await response.json();
+                    setTodos(todos);
+                };
+
+                const addTodo = async () => {
+                    if (title.trim() !== '') {
+                        await fetch('/add', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ title }),
+                        });
+
+                        setTitle('');
+                        fetchTodos();
+                    }
+                };
+
+                const updateTodo = async (todoId) => {
+                    await fetch(`/update/${todoId}`);
+                    fetchTodos();
+                };
+
+                const deleteTodo = async (todoId) => {
+                    await fetch(`/delete/${todoId}`);
+                    fetchTodos();
+                };
+
+                return (
+                    <div style={{ marginTop: '50px' }} className="ui container">
+                        <h1 className="ui center aligned header">Fastapi ToDo App</h1>
+
+                        <form className="ui form" onSubmit={(e) => { e.preventDefault(); addTodo(); }}>
+                            <div className="field">
+                                <label>Todo Title</label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    placeholder="Enter ToDo task..."
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                />
+                            </div>
+                            <button className="ui blue button" type="submit">Add</button>
+                        </form>
+
+                        <hr />
+
+                        {todos.map((todo) => (
+                            <div key={todo.id} className="ui segment">
+                                <p className="ui big header">{`${todo.id} | ${todo.title}`}</p>
+
+                                {todo.complete === false ? (
+                                    <span className="ui gray label">Not Complete</span>
+                                ) : (
+                                    <span className="ui green label">Complete</span>
+                                )}
+
+                                <button className="ui blue button" onClick={() => updateTodo(todo.id)}>
+                                    Update
+                                </button>
+                                <button className="ui red button" onClick={() => deleteTodo(todo.id)}>
+                                    Delete
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                );
+            };
+
+            ReactDOM.render(React.createElement(TodoApp), document.getElementById('root'));
+        });
+    </script>
+</body>
+</html>
+
